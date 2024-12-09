@@ -1,0 +1,4 @@
+repository "PointCloudAligment_tugce@tugce@cloud"
+  path "/"
+    br "/main"
+    co "/main"
