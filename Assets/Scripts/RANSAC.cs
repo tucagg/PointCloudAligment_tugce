@@ -43,7 +43,7 @@ public class RANSAC
         int inliers = 0;
         for (int i = 0; i < P.Count; i++)
         {
-            Vector3 transformedPoint = rotation.MultiplyPoint3x4(P[i]) + translation;
+            Vector3 transformedPoint = rotation.MultiplyPoint3x4(P[i]) + translation; // Rigid Transform
             float distance = Vector3.Distance(transformedPoint, Q[i % Q.Count]);
             if (distance < threshold)
                 inliers++;
@@ -51,36 +51,61 @@ public class RANSAC
         return inliers;
     }
 
-    // RANSAC ile dönüşümü bulma
     public static (Matrix4x4, Vector3) PerformRANSAC(List<Vector3> P, List<Vector3> Q, int iterations = 100, float threshold = 0.1f)
+{
+    Matrix4x4 bestRotation = Matrix4x4.identity;
+    Vector3 bestTranslation = Vector3.zero;
+    int bestInliers = 0;
+    float bestError = float.MaxValue;
+
+    for (int i = 0; i < iterations; i++)
     {
-        Matrix4x4 bestRotation = Matrix4x4.identity;
-        Vector3 bestTranslation = Vector3.zero;
-        int bestInliers = 0;
+        // 3 rastgele nokta seç
+        List<Vector3> sampleP = GetRandomPoints(P, 3);
+        List<Vector3> sampleQ = GetRandomPoints(Q, 3);
 
-        for (int i = 0; i < iterations; i++)
+        // 3 nokta üzerinden dönüşümü hesapla
+        var (rotation, translation) = AlignThreePoints(sampleP, sampleQ);
+
+        // Inliers sayısını kontrol et
+        int inliers = CountInliers(P, Q, rotation, translation, threshold);
+
+        // Hata hesapla
+        float error = CalculateError(P, Q, rotation, translation);
+
+        // En fazla inlier bulunan dönüşümü seç
+        if (inliers > bestInliers || (inliers == bestInliers && error < bestError))
         {
-            // 3 rastgele nokta seç
-            List<Vector3> sampleP = GetRandomPoints(P, 3);
-            List<Vector3> sampleQ = GetRandomPoints(Q, 3);
-
-            // 3 nokta üzerinden dönüşümü hesapla
-            var (rotation, translation) = AlignThreePoints(sampleP, sampleQ);
-
-            // Inliers sayısını kontrol et
-            int inliers = CountInliers(P, Q, rotation, translation, threshold);
-
-            // En fazla inlier bulunan dönüşümü seç
-            if (inliers > bestInliers)
-            {
-                bestInliers = inliers;
-                bestRotation = rotation;
-                bestTranslation = translation;
-            }
+            bestInliers = inliers;
+            bestRotation = rotation;
+            bestTranslation = translation;
+            bestError = error;
         }
 
-        return (bestRotation, bestTranslation);
+        // Debug ekranı için loglama
+        Debug.Log($"Iteration {i + 1}/{iterations}: Inliers = {inliers}, Error = {error:F4}");
     }
+
+    // En iyi sonuçları loglama
+    Debug.Log($"Best Inliers: {bestInliers}\nTotal Iterations: {iterations}\nBest Error: {bestError:F4}");
+
+    return (bestRotation, bestTranslation);
+}
+
+public static float CalculateError(List<Vector3> P, List<Vector3> Q, Matrix4x4 rotation, Vector3 translation)
+{
+    float totalError = 0.0f;
+    int count = Mathf.Min(P.Count, Q.Count);
+
+    for (int i = 0; i < count; i++)
+    {
+        Vector3 transformedPoint = rotation.MultiplyPoint3x4(P[i]) + translation;
+        float distance = Vector3.Distance(transformedPoint, Q[i]);
+        totalError += distance * distance; // Squared error
+    }
+
+    return totalError / count; // Mean squared error
+}
 
     // Listeden rastgele 3 nokta seç
     private static List<Vector3> GetRandomPoints(List<Vector3> points, int count)

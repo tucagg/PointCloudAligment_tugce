@@ -1,1 +1,1 @@
-/Users/tugcepolat/Unity/Vuforia/PointCloudAligment_tugce
+/Users/tuce/Documents/GitHub/PointCloudAligment_tugce
