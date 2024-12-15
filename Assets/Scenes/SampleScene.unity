@@ -401,6 +401,7 @@ GameObject:
   - component: {fileID: 515204431}
   - component: {fileID: 515204430}
   - component: {fileID: 515204432}
+  - component: {fileID: 515204433}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -452,8 +453,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3acd7691e9dbc43ab91cfe9dd335d353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  filePPath: fileP.txt
-  fileQPath: fileQ.txt
+  filePPath: Assets/Resources/fileP.txt
+  fileQPath: Assets/Resources/fileQ.txt
+--- !u!114 &515204433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 515204429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f594292ec659045b58aeef6d308783d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rotationAngles: {x: 30, y: 45, z: 0}
+  translationVector: {x: 1.5, y: 1.5, z: 1.5}
+  inputFileName: Resources/fileP.txt
+  outputFileName: Resources/fileQ.txt
 --- !u!1 &596080540
 GameObject:
   m_ObjectHideFlags: 0
