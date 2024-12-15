@@ -64,55 +64,58 @@ public class PointCloudManager : MonoBehaviour
     }
 
     void ApplyRANSAC()
-{
-    // Ensure we have enough points
-    if (P.Count == 0 || Q.Count == 0)
     {
-        infoText.text = "Point clouds are empty. Cannot apply RANSAC.";
-        return;
-    }
-
-    // Apply RANSAC for point registration
-    var (rotation, translation) = RANSAC.PerformRANSAC(P, Q);
-
-    // Clear previous transformed points and calculate the new ones
-    transformedQ.Clear();
-
-    if (registerSecondToFirst) // Register Q to P
-    {
-        foreach (var point in Q)
+        // Ensure we have enough points
+        if (P.Count == 0 || Q.Count == 0)
         {
-            Vector3 transformedPoint = rotation.MultiplyPoint3x4(point) + translation;
-            transformedQ.Add(transformedPoint);
+            infoText.text = "Point clouds are empty. Cannot apply RANSAC.";
+            return;
         }
-    }
-    else // Register P to Q
-    {
-        foreach (var point in P)
+
+        // Apply RANSAC for point registration
+        var (rotation, translation) = RANSAC.PerformRANSAC(P, Q);
+
+        // Clear previous transformed points and calculate the new ones
+        transformedQ.Clear();
+
+        // Compute rigid transformation for better accuracy
+        var (finalRotation, finalTranslation) = RANSAC.ComputeRigidTransformation(P, Q);
+
+        if (registerSecondToFirst) // Register Q to P
         {
-            Vector3 transformedPoint = rotation.MultiplyPoint3x4(point) + translation;
-            transformedQ.Add(transformedPoint);
+            foreach (var point in Q)
+            {
+                Vector3 transformedPoint = finalRotation.MultiplyPoint3x4(point) + finalTranslation;
+                transformedQ.Add(transformedPoint);
+            }
         }
+        else // Register P to Q
+        {
+            foreach (var point in P)
+            {
+                Vector3 transformedPoint = finalRotation.MultiplyPoint3x4(point) + finalTranslation;
+                transformedQ.Add(transformedPoint);
+            }
+        }
+
+        // Re-visualize with the newly transformed points
+        VisualizeOriginalPoints();
+
+        // Format the transformation parameters
+        string rotationMatrix = $"[{finalRotation.m00:F2}, {finalRotation.m01:F2}, {finalRotation.m02:F2}]\n" +
+                                $"[{finalRotation.m10:F2}, {finalRotation.m11:F2}, {finalRotation.m12:F2}]\n" +
+                                $"[{finalRotation.m20:F2}, {finalRotation.m21:F2}, {finalRotation.m22:F2}]";
+
+        string translationVector = $"[{finalTranslation.x:F2}, {finalTranslation.y:F2}, {finalTranslation.z:F2}]";
+
+        float scale = CalculateScale(finalRotation);
+
+        // Display transformation parameters
+        infoText.text = "RANSAC and Rigid Transformation Applied.\n" +
+                        "Rotation Matrix:\n" + rotationMatrix + "\n" +
+                        "Translation Vector:\n" + translationVector + "\n" +
+                        $"Scale: {scale:F2}";
     }
-
-    // Re-visualize with the newly transformed points
-    VisualizeOriginalPoints();
-
-    // Format the transformation parameters
-    string rotationMatrix = $"[{rotation.m00:F2}, {rotation.m01:F2}, {rotation.m02:F2}]\n" +
-                            $"[{rotation.m10:F2}, {rotation.m11:F2}, {rotation.m12:F2}]\n" +
-                            $"[{rotation.m20:F2}, {rotation.m21:F2}, {rotation.m22:F2}]";
-
-    string translationVector = $"[{translation.x:F2}, {translation.y:F2}, {translation.z:F2}]";
-
-    float scale = CalculateScale(rotation);
-
-    // Display transformation parameters
-    infoText.text = "RANSAC Applied.\n" +
-                    "Rotation Matrix:\n" + rotationMatrix + "\n" +
-                    "Translation Vector:\n" + translationVector + "\n" +
-                    $"Scale: {scale:F2}";
-}
 
     void ResetVisualization()
     {
@@ -181,10 +184,8 @@ public class PointCloudManager : MonoBehaviour
         movementLines.Clear();
 
         // Draw new lines between corresponding points
-        for (int i = 0; i < P.Count; i++)
+        for (int i = 0; i < Mathf.Min(P.Count, transformedQ.Count); i++)
         {
-            if (i >= transformedQ.Count) break; // Prevent out-of-range errors
-
             GameObject lineObject = new GameObject("MovementLine");
             LineRenderer lineRenderer = lineObject.AddComponent<LineRenderer>();
             lineRenderer.positionCount = 2;
