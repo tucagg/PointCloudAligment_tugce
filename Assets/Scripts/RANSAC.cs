@@ -65,41 +65,47 @@ public class RANSAC
         return totalError / count;
     }
 
-    public static (Matrix4x4, Vector3) PerformRANSAC(List<Vector3> P, List<Vector3> Q, int iterations = 100, float threshold = 0.1f)
+    public static (Matrix4x4, Vector3) PerformRANSAC(List<Vector3> P, List<Vector3> Q, int iterations = 1000, float threshold = 0.5f)
+{
+    Matrix4x4 bestRotation = Matrix4x4.identity;
+    Vector3 bestTranslation = Vector3.zero;
+    int bestInliers = 0;
+    float bestError = float.MaxValue;
+    int bestIteration = 0; // En iyi iterasyonu tutmak için
+
+    for (int i = 0; i < iterations; i++)
     {
-        Matrix4x4 bestRotation = Matrix4x4.identity;
-        Vector3 bestTranslation = Vector3.zero;
-        int bestInliers = 0;
-        float bestError = float.MaxValue;
+        // 3 rastgele nokta seç
+        List<Vector3> sampleP = GetRandomPoints(P, 3);
+        List<Vector3> sampleQ = GetRandomPoints(Q, 3);
 
-        for (int i = 0; i < iterations; i++)
+        // SVD ile dönüşümü hesapla
+        var (rotation, translation) = AlignThreePointsWithSVD(sampleP, sampleQ);
+
+        // Inliers sayısını hesapla
+        int inliers = CountInliers(P, Q, rotation, translation, threshold);
+
+        // Hata hesapla
+        float error = CalculateError(P, Q, rotation, translation);
+
+        // En iyi sonuçları seç
+        if (inliers > bestInliers || (inliers == bestInliers && error < bestError))
         {
-            // 3 rastgele nokta seç
-            List<Vector3> sampleP = GetRandomPoints(P, 3);
-            List<Vector3> sampleQ = GetRandomPoints(Q, 3);
-
-            // SVD ile dönüşümü hesapla
-            var (rotation, translation) = AlignThreePointsWithSVD(sampleP, sampleQ);
-
-            // Inliers sayısını hesapla
-            int inliers = CountInliers(P, Q, rotation, translation, threshold);
-
-            // Hata hesapla
-            float error = CalculateError(P, Q, rotation, translation);
-
-            // En iyi sonuçları seç
-            if (inliers > bestInliers || (inliers == bestInliers && error < bestError))
-            {
-                bestInliers = inliers;
-                bestRotation = rotation;
-                bestTranslation = translation;
-                bestError = error;
-            }
+            bestInliers = inliers;
+            bestRotation = rotation;
+            bestTranslation = translation;
+            bestError = error;
+            bestIteration = i + 1; // En iyi iterasyonu kaydet
         }
 
-        Debug.Log($"Best Inliers: {bestInliers}, Best Error: {bestError:F4}");
-        return (bestRotation, bestTranslation);
+        // Iteration logu
+        Debug.Log($"Iteration {i + 1}/{iterations}: Inliers = {inliers}, Error = {error:F4}");
     }
+
+    // En iyi iterasyonu göster
+    Debug.Log($"Best Iteration: {bestIteration}\nBest Inliers: {bestInliers}\nBest Error: {bestError:F4}\nTotal Iterations: {iterations}");
+    return (bestRotation, bestTranslation);
+}
 
     private static Vector3 CalculateCentroid(List<Vector3> points)
     {
